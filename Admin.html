@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Eventos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <style>
+    body {
+      font-family: 'Urbanist', sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 20px;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: none;
+      border-radius: 5px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+    }
+    .event-card, .entrada-card {
+      background: #222;
+      margin-top: 10px;
+      padding: 10px;
+      border-left: 5px solid #00ffe0;
+    }
+    button {
+      background-color: #00ffe0;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .tabs button {
+      width: 49%;
+      background: #333;
+      color: #fff;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>🎛️ Panel de administrador</h2>
+  <input id="name" type="text" placeholder="Nombre del evento" />
+  <textarea id="desc" placeholder="Descripción del evento"></textarea>
+  <input id="price" type="number" placeholder="Valor entrada" />
+  <input id="qty" type="number" placeholder="Cantidad de entradas" />
+  <input id="imgUrl" type="text" placeholder="URL imagen del evento" />
+  <input id="mpLink" type="text" placeholder="URL de pago MercadoPago" />
+  <button onclick="addEvent()">Agregar evento</button>
+
+  <div class="tabs">
+    <button onclick="showTab('eventos')">📅 Eventos</button>
+    <button onclick="showTab('entradas')">🎫 Entradas Vendidas</button>
+  </div>
+
+  <div id="eventosTab"></div>
+  <div id="entradasTab" style="display:none;"></div>
+  <button onclick="verifyQR()">📷 Verificar QR</button>
+</div>
+
+<script>
+  function addEvent() {
+    const event = {
+      id: Date.now().toString(),
+      name: name.value,
+      desc: desc.value,
+      price: price.value,
+      qty: parseInt(qty.value),
+      img: imgUrl.value,
+      mpLink: mpLink.value
+    };
+    const events = JSON.parse(localStorage.getItem('eventos') || "[]");
+    events.push(event);
+    localStorage.setItem('eventos', JSON.stringify(events));
+    renderEvents();
+  }
+
+  function removeEvent(id) {
+    let events = JSON.parse(localStorage.getItem('eventos'));
+    events = events.filter(ev => ev.id !== id);
+    localStorage.setItem('eventos', JSON.stringify(events));
+    let entradas = JSON.parse(localStorage.getItem('entradas') || "[]");
+    entradas = entradas.filter(e => !e.qr.startsWith(`QR-${id}-`));
+    localStorage.setItem('entradas', JSON.stringify(entradas));
+    renderEvents();
+    renderEntradasVendidas();
+  }
+
+  function showTab(tab) {
+    document.getElementById('eventosTab').style.display = tab === 'eventos' ? 'block' : 'none';
+    document.getElementById('entradasTab').style.display = tab === 'entradas' ? 'block' : 'none';
+    if (tab === 'eventos') renderEvents();
+    else renderEntradasVendidas();
+  }
+
+  function renderEvents() {
+    const div = document.getElementById('eventosTab');
+    const events = JSON.parse(localStorage.getItem('eventos') || "[]");
+    div.innerHTML = events.map(ev => `
+      <div class="event-card">
+        <img src="${ev.img}" width="100%" /><br/>
+        <strong>${ev.name}</strong><br/>
+        ${ev.desc}<br/>
+        Valor: $${ev.price}<br/>
+        Entradas: ${ev.qty}<br/>
+        <a href="${ev.mpLink}" target="_blank">🔗 Link de Pago</a><br/>
+        <button onclick="removeEvent('${ev.id}')">Eliminar</button>
+      </div>
+    `).join('');
+  }
+
+  function renderEntradasVendidas() {
+    const div = document.getElementById('entradasTab');
+    const entradas = JSON.parse(localStorage.getItem('entradas') || "[]");
+    div.innerHTML = entradas.map(en => `
+      <div class="entrada-card">
+        <strong>${en.nombre}</strong> - QR: ${en.qr}
+        <button onclick="eliminarEntrada('${en.qr}')">🗑️ Eliminar</button>
+      </div>
+    `).join('');
+  }
+
+  function eliminarEntrada(qr) {
+    let entradas = JSON.parse(localStorage.getItem('entradas'));
+    entradas = entradas.filter(e => e.qr !== qr);
+    localStorage.setItem('entradas', JSON.stringify(entradas));
+    renderEntradasVendidas();
+  }
+
+  function verifyQR() {
+    const code = prompt("Ingresa código QR:");
+    const entradas = JSON.parse(localStorage.getItem('entradas') || "[]");
+    const found = entradas.find(e => e.qr === code);
+    alert(found ? "✅ Entrada válida" : "❌ QR no encontrado");
+  }
+
+  showTab('eventos');
+</script>
+</body>
+</html>
