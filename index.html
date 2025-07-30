@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,6 +6,7 @@
   <title>Admin - Eventos</title>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;700&display=swap" rel="stylesheet" />
   <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script> <!-- Incluir html5-qrcode -->
   <style>
     body {
       font-family: 'Urbanist', sans-serif;
@@ -41,6 +43,12 @@
       color: #fff;
       margin: 5px 0;
     }
+    #reader {
+      width: 100%;
+      height: 300px;
+      margin-top: 20px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -51,7 +59,6 @@
   <input id="price" type="number" placeholder="Valor entrada" />
   <input id="qty" type="number" placeholder="Cantidad de entradas" />
   <input id="imgUrl" type="text" placeholder="URL imagen del evento" />
-  <input id="mpLink" type="text" placeholder="URL de pago MercadoPago" />
   <button onclick="addEvent()">Agregar evento</button>
 
   <div class="tabs">
@@ -61,7 +68,8 @@
 
   <div id="eventosTab"></div>
   <div id="entradasTab" style="display:none;"></div>
-  <button onclick="verifyQR()">📷 Verificar QR</button>
+  <button onclick="startQRScanner()">📷 Iniciar Lector de QR</button>
+  <div id="reader"></div>
 </div>
 
 <script>
@@ -72,8 +80,7 @@
       desc: desc.value,
       price: price.value,
       qty: parseInt(qty.value),
-      img: imgUrl.value,
-      mpLink: mpLink.value
+      img: imgUrl.value
     };
     const events = JSON.parse(localStorage.getItem('eventos') || "[]");
     events.push(event);
@@ -109,7 +116,6 @@
         ${ev.desc}<br/>
         Valor: $${ev.price}<br/>
         Entradas: ${ev.qty}<br/>
-        <a href="${ev.mpLink}" target="_blank">🔗 Link de Pago</a><br/>
         <button onclick="removeEvent('${ev.id}')">Eliminar</button>
       </div>
     `).join('');
@@ -133,11 +139,30 @@
     renderEntradasVendidas();
   }
 
-  function verifyQR() {
-    const code = prompt("Ingresa código QR:");
-    const entradas = JSON.parse(localStorage.getItem('entradas') || "[]");
-    const found = entradas.find(e => e.qr === code);
-    alert(found ? "✅ Entrada válida" : "❌ QR no encontrado");
+  function startQRScanner() {
+    const html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+      { facingMode: "environment" }, 
+      {
+        fps: 10,
+        qrbox: 250
+      },
+      (decodedText, decodedResult) => {
+        alert(`Código QR escaneado: ${decodedText}`);
+        html5QrCode.stop().then(ignore => {
+          document.getElementById("reader").style.display = "none"; // Ocultar el lector
+        }).catch(err => {
+          console.error("Error al detener el lector de QR:", err);
+        });
+      },
+      (errorMessage) => {
+        // Manejo de errores (opcional)
+      }
+    ).catch(err => {
+      console.error("Error al iniciar el lector de QR:", err);
+    });
+
+    document.getElementById("reader").style.display = "block"; // Mostrar el lector
   }
 
   showTab('eventos');
